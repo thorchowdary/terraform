@@ -1,0 +1,6 @@
+1. terraform init - it will downlaods the plugins from the provider
+2. terraform plan - in this we can see the what and all resources are getting created/updated/deleted
+3. terraform validate - it will validate the code syntax
+4. terraform fmt - it will format the code syntax
+5. terraform apply --auto-approve - the resources/infra will get created in aws
+6. terraform destory -it will destory the created resources
