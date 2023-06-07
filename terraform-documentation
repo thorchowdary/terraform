@@ -61,7 +61,7 @@ terraform commands:
 3. terraform fmt and terraform validate
    terraform fmt will correct the indenetation
    terraform validate will check whether the syntax is correct or not
-4. terraform show 
+4. terraform show (it will read the .tfstate file)
    this is print the values which are defined in the outputs.tf file
 5. terraform apply --auto-approve
    it will create the resource 
@@ -129,6 +129,221 @@ different types of file in terraform:
        homedirectory/.aws/config file and crednetials file(it will have access key and secret key)
    
   how terraform connects with aws from outside.?
+  -----------------------------------------------
   with credentials file located in 
   .aws/confif and credentials
   in credentials will have access key and secret key
+  
+  ***
+  at a time only one person can perform actions on tfstate the other person has to wait untill the session gets closed
+  
+  meta arguments:
+  ----------------
+  1.lifecycle
+  2.depends on
+  3.count
+    count = lenght(var.public_subnet)
+  4.for each
+  5.element
+    element(list,index)
+    element(subnet_list,count)
+    
+  lifecycle:
+  -----------
+  after making some changes in the terraform code.
+  whenever you do terraform apply the exisisting resoucre will get destroyed and will created after terraform apply inorder to overcome that we can use
+  lifcycle{
+    create_before_destroy = true
+    }
+   this type of deploment is called "blue green deployment"
+   
+   depens_on
+   ---------
+   create resource once another resources created
+   
+   depends_on = []
+   
+   ******
+   whenever you do terraform apply terraform crosss checks the tfstate file and resources in aws if there is any change and that change is mutable it wil update else it will
+   destroy and creates it.
+   
+   you should not loose tfstate file because all the inforamtion related to resources and it will cross check with resources based on that add/delete/update will happen
+    
+   that is the reason we store in s3 bucket
+   suppose if we loose the tfstate file will do terraform import
+   
+   terraform import:
+   ------------------
+   terraform import <resource_type><resource_name> <resource_id>
+   terraform import aws_instance.ec2_example id-12345
+   
+   after importing check terraform plan and apply it should not create/remove the existing resources
+   
+   ****in terraform block it won't support interpolation/variables
+   
+   terraform {
+      backend "s3" {
+      bucket = "your-bucket-name" //we cannot do here like var.bucketname or aws_resource.bucketname like that
+      key    = "path/to/your/terraform.tfstate"
+      region = "your-bucket-region"
+    }
+  }
+  
+  dyanamoDB lock:
+  -------------------
+   will upload tfstate file in s3
+   if some one is uploading tfstate file to s3 at a time, s3 won't stop like the os did(in local if we open two sessions at a time and tryies to perform operations will get one
+   lock error)
+   since s3 does not have intelligence to lock so we use dynamoDB it will allow/lock one user and block other users to dump tfstate file in s3.
+   
+   -> whenever you doing terraform apply if power gone or something happened and you lost the terminal that tile tfstate file will be in between we can unlock if with
+   ----terraform force unlock LOCKID---
+   
+   how to create n resources at a time.?
+   --------------------------------------
+   provider "aws" {
+      region = "us-west-2"  # Replace with your desired region
+    }
+
+    resource "aws_instance" "ec2_instance" {
+    count         = 10  # Number of instances to create
+    instance_type = "t2.micro"  # Replace with your desired instance type
+    ami           = "ami-0c94855ba95c71c99"  # Replace with your desired AMI ID
+
+    tags = {
+        Name = "terraform-ec2-instance-${count.index}"
+      }
+    }
+    
+    resource aws_bucket logicalname{
+      count = 2
+      bucket_name = "hell0_${count.index+1}"
+    }
+
+   condition in terraform:
+   ------------------------
+   variable condition{
+    type = boolena
+    description = true/false
+    }
+    
+    resource aws_instance server{
+      count = var.comition?1:0
+    }
+    
+    null resource in terraform:
+    ----------------------------
+    it wont create any resource but it will execute commands by connecting to the server/ec2 that will make sure not creating ec2 and installs/execute respective commands
+    in the server
+    
+    provisioners:
+    ------------
+    types of provisoners:
+    ---------
+    1.file
+    2.local-exec
+    3.remote-exec
+    
+    provisioners use connection to trasfer file securely:
+    connection {
+      type = "ssh"
+      host = "ipaddress"
+      user = "ec2-user"
+      private_key = file(pemfile)
+      timeout = 4m
+    }
+    
+   1. file:
+    ----
+    copy a file fromm source(local) to destination(cloud)
+    
+    syntax:
+    ------
+    provisioner "file"{
+      source ="path of the file in local"
+      destination = "/home/ece/file.txt"
+    }
+    
+   2. local-exec:
+    ----------
+    with the help of provisioners we can install some software.
+    it will create fiel in local machine
+    provisioner "local-exec"{
+      command ="touch hello.txt"
+    }
+   
+    3. remote-exec
+    --------------
+    resource "null_resource" "server"{
+      provisioner "remote-exec" {
+        conection{
+        type ="ssh"
+        user ="ec2-user"
+        private_key = file("id.rsa")
+        host = aws_instance.jenkins.public.ip
+        }
+      inline= [
+        "systemctl stop jenkins"
+        "systemctl start jenkins"
+        ]
+      } 
+     }
+    
+terraform modules:
+------------------
+don't use resource block to create resource, use modules
+with the help of modules we can reuse the code instead of writting entire code we can use it can make/add some more thingd to the resource.
+
+to create resource we can go with:
+1. resource
+2. modules
+
+we will write resource code and put in to modules folder and we cna create the resource using the modules
+modules
+  ->ec2.tf
+    resource "aws_instance" "Server"{
+    }
+   
+now we can use moudles concept to create the instance instead of writing entire code, we can reuse it
+
+module "ec2_instace"{
+  source ="modules folder path"
+  name = "single_instance"
+}
+
+*** to apply particular resource
+----------------------------------
+we use --target=repource_name.logicalname
+terrafomr apply --target=repource_name.logicalname
+   
+     
+terraform workspace:
+---------------------
+suppose if we have environments like dev,stage,prepod,prod
+if we do terraform apply will get one tfstate file, to seperate each terraform.tfstate file we use workspace
+terraform create workspace dev
+terraform plan
+teraafomr apply
+---------------------------------------
+terraform create workspace stage
+terraform plan
+teraafomr apply
+--------------------------------------
+terraform create workspace prepod
+terraform plan
+teraafomr apply
+
+without workspace:
+------------------
+dev,stage,prepod,prod.tfvars------will get single ---.tfstate file
+
+when we do terraform apply all will update one .tfstate file, if one thing goes wrong all other env will get effected so we use workspace it seperates each env by creating
+virtual environment
+
+
+
+
+
+    
+   
+   
