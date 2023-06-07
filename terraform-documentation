@@ -1,0 +1,134 @@
+Terraform:
+Benefits of terrraform:
+-----------------------
+1. Reusability
+2. no manual intervention
+
+in terraform we have 
+  1.dataSource
+  2.resource
+  
+  1.datasource:
+    we can do only read
+    ex: getting an ami id, region, AZ's
+    --------
+    syntax:
+    --------
+    data "resource_provider_name" "logical_name"{
+      arguments
+      filters{
+    }
+    }
+    
+  2.resource:
+  we can create, update, delete the resources
+  --------
+  syntax:
+  --------
+  resource "resource_provider_name" "logical_name"{
+    arguments
+   }
+   
+ *** Interpolation
+      calling one varibale in another
+      example:
+      a = 10
+      b = ${a}
+      
+terraform commands:
+---------------------
+1.terraform init
+  *. it will scan all the .tf files, finds the provider and it downloads all the provider plugins(in that will have programs that make API 
+     calls which will help to call our aws account and perform IAC operation)and configuration files from hasicorp website
+   
+  
+   terraform {
+   required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.1.0"
+      }
+      }
+    }
+
+    provider "aws" {
+    # Configuration options
+    }
+
+***provider version is different and terraform version is different.
+2. terraform plan 
+   after hitting this command it will show what and all resources are getting created/updated/deleted
+3. terraform fmt and terraform validate
+   terraform fmt will correct the indenetation
+   terraform validate will check whether the syntax is correct or not
+4. terraform show 
+   this is print the values which are defined in the outputs.tf file
+5. terraform apply --auto-approve
+   it will create the resource 
+   NOTE:don't use always --auto-approve 
+
+different types of file in terraform:
+-------------------------------------
+1. variales.tf
+   here we declare the variables
+   varible types:
+   --------------
+    1. string
+    2. bool
+    3. map
+    4. number
+    5. list/set/tuple
+    6. object
+   
+   syntax:
+   variable buckername{
+      type = string/bool/map/number/list/object
+      description ="
+      default = "bucketops123" //this is default value
+    }
+    
+   we can just declare the variable using variable syntax and can pass them in *.tfvars file and we can use that file at run time
+   terraform apply -var *.tfvars
+   terraform plan -var *.tfvars
+   
+   with this approch we can define all stage variable in stage.tfvars and dev variables in dev.tfvars and prod variables in prod.tfvars
+   we can pass them at run time
+   
+   example:
+   suppose if use 
+   
+   *.tfvars file:
+   region = ap-south-1
+   
+   variables.tf
+   variable region{
+   }
+   
+   while hitting terraform plan and apply if we don't pass the *.tfvars file it will ask as user input
+   or we can pass like this
+   terraform apply -var *.tfvars
+   terraform plan -var *.tfvars
+   
+
+2. output.tf
+   this file helps us to get the information like after creating load balancer it endpoint and etc...
+   
+   syntax:
+   output bucketname{
+    attribute
+   }
+   
+   output ip{
+    attribute
+   }
+    
+   *** with the help of terraform output / terraform show -output.tf we can get the information of what we decalred in outputs.tf file
+   
+   *** to get which user access key and secret key
+       we use aws sts get-caller-identity
+       homedirectory/.aws/config file and crednetials file(it will have access key and secret key)
+   
+  how terraform connects with aws from outside.?
+  with credentials file located in 
+  .aws/confif and credentials
+  in credentials will have access key and secret key
